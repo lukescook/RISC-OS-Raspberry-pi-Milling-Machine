@@ -1,0 +1,137 @@
+   10 ON ERROR CLOSE#0:PRINT ERL :END
+   15 MODE 32:COLOUR 135:CLS
+   20 REMTRACE STEP ON
+   30 DIM x%(3),y%(3)
+   40 ch$="0123456789ABCDEF"
+   50 osize%=0:oldosize%=&84
+   60 scale%=400
+   70 file% = OPENIN("test")
+   80 hex$ = ""  : c%=0
+   90 PTR# file% = oldosize%
+  100 l%= oldosize%+&28
+  110 osize%=BGET#file%
+  120 osize%= osize%+(BGET#file% *&100 ):IF osize%=0 THEN CLOSE#file% : END
+  130 oldosize%+=osize%
+  140 REMPRINT l%: PRINT osize%: PRINT oldosize%
+  150 PROCgetfour(l%):x%(0)=b%
+  160 l%+=4 :PROCgetfour(l%):y%(0)=b%
+  170 PLOT 4,x%(0)*2/scale%,y%(0)*2/scale%
+  180 CASE BGET#file% OF
+  190   WHEN 6 :PROCcl
+  200   WHEN 8 :PROCsl
+  210   OTHERWISE PRINT "Unknown type"
+  220 ENDCASE
+  230 DEF PROCcl
+  240 PTR# file%=(PTR# file%)+3
+  250 REPEAT
+  260   PROCvalue
+  270   PTR# file%=(PTR# file%)+4
+  280   PROCdraw
+  290   x%(0)=x%(3) : y%(0)=y%(3)
+  300 UNTIL PTR#file%>oldosize%-9
+  310 IF EOF# file% =TRUE THEN CLOSE#file% :END ELSE GOTO 90
+  320 ENDPROC
+  330 DEF PROCsl
+  340 PTR# file%=(PTR# file%)+3
+  350 REPEAT
+  360   l%=(PTR# file%)
+  370   PROCgetfour(l%):x%=b%
+  380   l%=(PTR# file%)
+  390   PROCgetfour(l%):y%=b%
+  400   PTR# file%=(PTR# file%)+4
+  410   PROCdrawstraight(x%,y%,0,0,0)
+  420 UNTIL PTR#file%>oldosize%-9
+  430 IF EOF# file% =TRUE THEN CLOSE#file% : END ELSE GOTO 90
+  440 ENDPROC
+  450
+  460
+  470
+  480 END
+  490 DEF PROCgetfour(l%)
+  500 PTR# file%= l%
+  510 b%=(BGET# file%)+(BGET# file%* &100)+(BGET# file%*&10000)+(BGET# file%*&1000000)
+  520 ENDPROC
+  530 DEF PROCdraw
+  540 FOR i%=0 TO 3
+  550   REM PRINT x%(i%), y%(i%)
+  560
+  570 NEXT
+  580 PROCbeziercubic(x%(0)/scale%,y%(0)/scale%,x%(1)/scale%,y%(1)/scale%,x%(2)/scale%,y%(2)/scale%,x%(3)/scale%,y%(3)/scale%,20,0,0,0)
+  590 ENDPROC
+  600 DEF PROCvalue
+  610 FOR i%=1 TO 3
+  620   l%=(PTR# file%)
+  630   PROCgetfour(l%):x%(i%)=b%
+  640   l%=(PTR# file%)
+  650   PROCgetfour(l%):y%(i%)=b%
+  660 NEXT
+  670 ENDPROC
+  680
+  690
+  700 REM BEZIER CUBIC ********************************
+  710
+  720 Width% = 200
+  730 Height% = 200
+  740
+  750 REM Set window size:
+  760 VDU 23,22,Width%;Height%;8,16,16,128
+  770
+  780 REM Draw cubic Bézier curve:
+  790 REM PROCbeziercubic(160,150, 10,120, 30,0, 150,50, 20, 0,255,0)
+  800 END
+  810
+  820 DEF PROCbeziercubic(x1,y1,x2,y2,x3,y3,x4,y4,n%,r%,g%,b%)
+  830 REMTRACE STEP OFF
+  840 LOCAL i%, t, t1, a, b, c, d, px%() ,py%()
+  850 DIM px%(n%) ,py%(n%)
+  860
+  870 FOR i% = 0 TO n%
+  880   t = i% / n%
+  890   t1 = 1 - t
+  900   a = t1^3
+  910   b = 3 * t * t1^2
+  920   c = 3 * t^2 * t1
+  930   d = t^3
+  940   px%(i%) = INT(a * x1 + b * x2 + c * x3 + d * x4 + 0.5)
+  950   py%(i%) = INT(a * y1 + b * y2 + c * y3 + d * y4 + 0.5)
+  960 NEXT
+  970
+  980 FOR i% = 0 TO n%-1
+  990   PROCbresenham(px%(i%),py%(i%),px%(i%+1),py%(i%+1),r%,g%,b%)
+ 1010 NEXT
+ 1020 REMTRACE STEP ON
+ 1030 ENDPROC
+ 1040
+ 1050 DEF PROCbresenham(x1%,y1%,x2%,y2%,r%,g%,b%)
+ 1060 LOCAL dx%, dy%, sx%, sy%, e
+ 1070 dx% = ABS(x2% - x1%) : sx% = SGN(x2% - x1%)
+ 1080 dy% = ABS(y2% - y1%) : sy% = SGN(y2% - y1%)
+ 1090 IF dx% < dy% e = dx% / 2 ELSE e = dy% / 2
+ 1100 REPEAT
+ 1110   PROCsetpixel(x1%,y1%,r%,g%,b%)
+ 1120   IF x1% = x2% IF y1% = y2% UNTIL TRUE :ENDPROC
+ 1130   IF dx% > dy% THEN
+ 1140     x1% += sx% : e -= dy% : IF e < 0 e += dx% : y1% += sy%
+ 1150   ELSE
+ 1160     y1% += sy% : e -= dx% : IF e < 0 e += dy% : x1% += sx%
+ 1170   ENDIF
+ 1180 UNTIL FALSE
+ 1190 ENDPROC
+ 1200
+ 1210 DEF PROCsetpixel(x%,y%,r%,g%,b%)
+ 1220 COLOUR 1,r%,g%,b%
+ 1230 GCOL 1
+ 1240 IF x%=x1% AND y%=y1% PLOT 4,x%*2,y%*2
+ 1250 PLOT 5, x%*2,y%*2
+ 1260 ENDPROC
+ 1270
+ 1280 REM BEZIER CUBIC ******************************** END
+ 1290
+ 1300 DEF PROCdrawstraight(x%,y%,r%,g%,b%)
+ 1310 PRINT x% ,y% ,x%(0),y%(0)
+ 1320 COLOUR 1,r%,g%,b%
+ 1330 REMWAIT 400
+ 1340 GCOL 1 :PRINT"line"
+ 1350 IF x%=x%(0) AND y%=y%(0)THEN PLOT 5,x%*2/scale%,y%*2/scale% :PRINT "I moved didn't draw"
+ 1360 DRAW x%*2/scale%,y%*2/scale%
+ 1370 ENDPROC

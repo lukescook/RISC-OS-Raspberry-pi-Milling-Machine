@@ -1,0 +1,131 @@
+REM RPi 17 Stepper motor plotter test
+REM gp%13 is direction gp%12 is motor 1
+PROCsetup
+PRINT '"Driving Stepa motor..."
+PRINT '"Escape to quit"
+direction%=0
+REM 120 = 360 degres  cw%=0 ccw%=1
+
+REPEAT
+READ mtr%,ang%,dir%
+IF cw%<>99 PROCrotate (mtr%,ang%,cw%,puls%)
+UNTIL cw%=99
+
+
+PROCalloff
+END
+
+DATA 1,900,0,1,90,1,1,90,0,1,90,1,1,90,0,1,90,1,2,180,0,2,180,1,2,180,0,2,180,1,3,90,0,3,90,1,3,360,0,3,360,1,3,720,99
+
+DEF PROCmove(movex%,movey%)
+IF movex%=0
+   IF movey%>0
+      FOR i% =0 TO movey% : PROCstep(my%,cw%,puls%) :NEXT
+   ENDIF
+   IF movey%<0
+      FOR i% =0 TO movey% : PROCstep(my%,ccw%,puls%) :NEXT
+   ENDIF
+ENDIF
+
+IF movey%=0
+   IF movex%>0
+      FOR i% =0 TO movex% : PROCstep(mx%,cw%,puls%) :NEXT
+   ENDIF
+   IF movex%<0
+      FOR i% =0 TO movex% : PROCstep(mx%,ccw%,puls%) :NEXT
+   ENDIF
+ENDIF
+
+IF movey% <> 0 AND movex% <> 0
+   IF ABS(movex%) > ABS(movey%)
+     WHILE movey% <>0
+        tempx = movex% / ABS(movey%)
+        IF tempx=0
+           PRINT "This prints someting I dont know why"
+        ENDIF
+        IF tempx >0
+           FOR i = 0 TO tempx-1
+               PROCstep(mx%,cw%,puls%)
+           NEXT
+        ENDIF
+        IF tempx < 0
+           FOR i = 0 TO tempx+1 STEP-1
+               PROCstep(mx%,ccw%,puls%)
+           NEXT
+        ENDIF
+        movex% -= tempx
+        IF movey% >0
+           PROCstep(my%,cw%,puls%)
+           movey% = movey%-1
+        ENDIF
+        IF movey% < 0
+           PROCstep(my%,ccw%,puls%)
+           movey% = movey% =1
+        ENDIF
+     ENDWHILE
+REM move the remainder of x coordinates
+     IF movex% > 0
+       FOR i = 0 TO movex%-1
+           PROCstep(mx%,cw%,puls%)
+       NEXT
+     ENDIF
+     IF movex% < 0
+       FOR i = 0 TO movex%=1 step -1
+           PROCstep(mx%,ccw%,puls%)
+       NEXT
+     ENDIF
+REM now if ABS movex is not > ABS movey
+
+
+   ELSE
+
+
+
+
+
+
+
+DEF PROCstep (mtr%,dir%,puls%)
+SYS "GPIO_WrightData",gp%(13),dir%
+SYS "GPIO_WrightData",gp%(13-mtr%),1
+PROCwait(puls%)
+SYS "GPIO_WrightData",gp%(13-mtr%),0
+PROCwait(puls%)
+ENDPROC
+
+DEF PROCwait(puls%)
+t%=TIME: REPEAT UNTIL TIME>=t%+(puls%/10)
+ENDPROC
+
+DEF PROCrotate (mtr%,ang%,cw%,pls%)
+SYS "GPIO_WriteData",gp%(13),cw%
+FOR s%=0 TO (ang%/3)
+    SYS "GPIO_WriteData" ,gp%(13-mtr%),1
+    PROCwait(puls%)
+    SYS "GPIO_WriteData",gp%(13-mtr%),0
+    PROCwait(puls%)
+NEXT
+PROCwait(puls%*10)
+ENDPROC
+
+DEF PROCsetup
+REM Requires GPIO module v0.46 or later
+OSCLI"RMEnsure GPIO 0.46 RMLoad System:Modules.GPIO"
+OSCLI"RMEnsure GPIO 0.46 Error Cannot locate the GPIO Module..."
+ON ERROR PRINT' REPORT$" AT LINE ";ERL:PROCalloff :END
+DIM gp%(17) :gp%()=7,8,25,11,9,10,1,17,21,22,18,23,24,15,0,14,4
+SYS "GPIO_EnableI2C",0: REM Enables I2C pins as GPIOs giving 17 in total
+SYS "GPIO_ExpAsGPIO",2: REM Sets al GPIOs as outputs
+puls%=2
+mx%=1
+my%=2
+mz%=3
+cw%=1
+ccw%=0
+ENDPROC
+
+DEF PROCalloff
+  FOR n%=16 TO 0 STEP -1
+      SYS "GPIO_WriteData",gp%(n%),0
+  NEXT n%
+ENDPROC
