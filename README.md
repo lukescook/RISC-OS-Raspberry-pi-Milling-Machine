@@ -3,4 +3,4 @@ The program uses the file from a !Draw file (a pre-built in software on RISC OS)
 
 The readable files are the same as the true files although the true files can't be viewed on GitHub or windows. The final step is to transfer the data from reader to the plotter as one program. I have also got plotter IIC for the use of an ICC GPIO expansion board.
 
-line and test in true files are example of drawfiles
+line and test in true files are example of draw files.
